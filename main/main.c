@@ -41,8 +41,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-static const char TAG[] = "i2c";
-
 #define WM8960_DEVICE_ADDRESS (0x34)
 
 #define I2C_MASTER_SCL_IO           22      /*!< GPIO number used for I2C master clock */
@@ -55,8 +53,6 @@ static const char TAG[] = "i2c";
 #define PORT_NUMBER -1
 #define LENGTH 48
 #define I2C_EEPROM_MAX_TRANS_UNIT (48)
-
-i2c_master_bus_handle_t bus_handle;
 
 typedef struct {
     i2c_device_config_t eeprom_device;  /*!< Configuration for eeprom device */
@@ -76,59 +72,8 @@ typedef struct i2c_eeprom_t i2c_eeprom_t;
 /* handle of EEPROM device */
 typedef struct i2c_eeprom_t *i2c_eeprom_handle_t;
 
-/**
- * @brief Write a byte to a MPU9250 sensor register
- */
-static esp_err_t wm8960_register_write_byte(uint8_t reg_addr, uint16_t data)
-{
-    int ret;
-    uint8_t write_buf[2] = {0};
-
-    // write_buf[1] = reg_addr;
-    // write_buf[0] = (uint8_t) data;
-
-    // write_buf[1] &= ~(1 << 0);
-    // write_buf[1] |= (data & (1 << 8)) >> 8;
-
-    ret = i2c_master_write_to_device(I2C_MASTER_NUM, WM8960_DEVICE_ADDRESS, write_buf, sizeof(write_buf), I2C_MASTER_TIMEOUT_MS / portTICK_PERIOD_MS);
-    
-    ESP_LOGE(BT_AV_TAG, "i2c failed, status: %d", ret);
-
-    return ret;
-}
-
-esp_err_t i2c_init(i2c_master_bus_handle_t bus_handle, const i2c_eeprom_config_t *eeprom_config, i2c_eeprom_handle_t *eeprom_handle)
-{
-    esp_err_t ret = ESP_OK;
-    i2c_eeprom_handle_t out_handle;
-    out_handle = (i2c_eeprom_handle_t)calloc(1, sizeof(i2c_eeprom_handle_t));
-    ESP_GOTO_ON_FALSE(out_handle, ESP_ERR_NO_MEM, err, TAG, "no memory for i2c eeprom device");
-
-    i2c_device_config_t i2c_dev_conf = {
-        .scl_speed_hz = eeprom_config->eeprom_device.scl_speed_hz,
-        .device_address = eeprom_config->eeprom_device.device_address,
-    };
-
-    if (out_handle->i2c_dev == NULL) {
-        ESP_GOTO_ON_ERROR(i2c_master_bus_add_device(bus_handle, &i2c_dev_conf, &out_handle->i2c_dev), err, TAG, "i2c new bus failed");
-    }
-
-    out_handle->buffer = (uint8_t*)calloc(1, eeprom_config->addr_wordlen + I2C_EEPROM_MAX_TRANS_UNIT);
-    ESP_GOTO_ON_FALSE(out_handle->buffer, ESP_ERR_NO_MEM, err, TAG, "no memory for i2c eeprom device buffer");
-
-    out_handle->addr_wordlen = eeprom_config->addr_wordlen;
-    out_handle->write_time_ms = eeprom_config->write_time_ms;
-    *eeprom_handle = out_handle;
-
-    return ESP_OK;
-
-err:
-    if (out_handle && out_handle->i2c_dev) {
-        i2c_master_bus_rm_device(out_handle->i2c_dev);
-    }
-    free(out_handle);
-    return ret;
-}
+i2c_master_bus_handle_t bus_handle;
+i2c_master_dev_handle_t i2c_dev;
 
 /**
  * @brief i2c master initialization
@@ -143,22 +88,37 @@ static esp_err_t i2c_master_init(void)
         .glitch_ignore_cnt = 7,
     };
 
-    i2c_eeprom_config_t eeprom_config = {
-        .eeprom_device.scl_speed_hz = I2C_MASTER_FREQ_HZ,
-        .eeprom_device.device_address = WM8960_DEVICE_ADDRESS,
-        .addr_wordlen = 2,
-        .write_time_ms = 10,
+    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_config, &bus_handle));
+
+    esp_err_t ret = ESP_OK;
+
+    i2c_device_config_t i2c_dev_conf = {
+        .scl_speed_hz = I2C_MASTER_FREQ_HZ,
+        .device_address = WM8960_DEVICE_ADDRESS,
     };
 
-    i2c_eeprom_handle_t eeprom_handle;
+    ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &i2c_dev_conf, &i2c_dev));
 
-    uint32_t block_addr = 0x0010;
-    uint8_t buf[LENGTH];
-    for (int i = 0; i < LENGTH; i++) {
-        buf[i] = i;
-    }
-    uint8_t read_buf[LENGTH];
-    return i2c_init(bus_handle, &eeprom_config, &eeprom_handle);
+    return ret;
+}
+
+/**
+ * @brief Write a byte to a MPU9250 sensor register
+ */
+static esp_err_t wm8960_register_write_byte(uint8_t reg_addr, uint16_t data)
+{
+    int ret;
+    uint8_t write_buf[2] = {0};
+
+    write_buf[1] = reg_addr;
+    write_buf[0] = (uint8_t) data;
+
+    write_buf[1] &= ~(1 << 0);
+    write_buf[1] |= (data & (1 << 8)) >> 8;
+
+    return i2c_master_transmit(i2c_dev, write_buf, sizeof(write_buf), -1);
+
+    return ret;
 }
 
 void init_wm8960(void)
@@ -178,7 +138,7 @@ void init_wm8960(void)
                                                 WM8960_R25_MICB |
                                                 WM8960_R25_DIGENB));
 
-    ESP_ERROR_CHECK(i2c_driver_delete(I2C_MASTER_NUM));
+    ESP_ERROR_CHECK(i2c_master_bus_rm_device(i2c_dev));
     ESP_LOGI(BT_AV_TAG, "I2C de-initialized successfully");
 }
 
