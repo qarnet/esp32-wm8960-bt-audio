@@ -41,7 +41,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#define WM8960_DEVICE_ADDRESS (0x34)
+// #define WM8960_DEVICE_ADDRESS (0x34)
+#define WM8960_DEVICE_ADDRESS (0b0011010)
 
 #define I2C_MASTER_SCL_IO           22      /*!< GPIO number used for I2C master clock */
 #define I2C_MASTER_SDA_IO           21      /*!< GPIO number used for I2C master data  */
@@ -110,13 +111,17 @@ static esp_err_t wm8960_register_write_byte(uint8_t reg_addr, uint16_t data)
     int ret;
     uint8_t write_buf[2] = {0};
 
-    write_buf[1] = reg_addr;
-    write_buf[0] = (uint8_t) data;
+    write_buf[0] = reg_addr;
+    write_buf[1] = (uint8_t) data;
+    // write_buf[1] = (uint8_t) data;
+    // write_buf[0] = reg_addr;
 
-    write_buf[1] &= ~(1 << 0);
-    write_buf[1] |= (data & (1 << 8)) >> 8;
+    // write_buf[0] &= ~(1 << 0);
+    // write_buf[0] |= (data & (1 << 8)) >> 8;
 
-    return i2c_master_transmit(i2c_dev, write_buf, sizeof(write_buf), -1);
+    ret =  i2c_master_transmit(i2c_dev, write_buf, sizeof(write_buf), -1);
+
+    ESP_LOGI(BT_AV_TAG, "%d", ret);
 
     return ret;
 }
@@ -269,8 +274,6 @@ void app_main(void)
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
-
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
 
     init_wm8960();
 
