@@ -111,17 +111,14 @@ static esp_err_t wm8960_register_write_byte(uint8_t reg_addr, uint16_t data)
     int ret;
     uint8_t write_buf[2] = {0};
 
-    write_buf[0] = reg_addr;
+    write_buf[0] = reg_addr << 1;
     write_buf[1] = (uint8_t) data;
-    // write_buf[1] = (uint8_t) data;
-    // write_buf[0] = reg_addr;
 
-    // write_buf[0] &= ~(1 << 0);
-    // write_buf[0] |= (data & (1 << 8)) >> 8;
+    write_buf[0] &= ~(1 << 0);
+
+    write_buf[0] |= (data & (1 << 8)) >> 8;
 
     ret =  i2c_master_transmit(i2c_dev, write_buf, sizeof(write_buf), -1);
-
-    ESP_LOGI(BT_AV_TAG, "%d", ret);
 
     return ret;
 }
