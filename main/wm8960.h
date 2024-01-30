@@ -73,8 +73,8 @@
 
 /* ROUT1 Volume */
 #define WM8960_R3_OUT1VU BIT(8)
-#define WM8960_R3_LO1ZC BIT(7)
-#define WM8960_R3_LOUT1VOL(x) (((x) & 0b1111111) << 0)
+#define WM8960_R3_RO1ZC BIT(7)
+#define WM8960_R3_ROUT1VOL(x) (((x) & 0b1111111) << 0)
 
 /* Clocking */
 #define WM8960_R4_ADCDIV(x) (((x) & 0b111) << 6)

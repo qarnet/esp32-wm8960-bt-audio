@@ -55,24 +55,6 @@
 #define LENGTH 48
 #define I2C_EEPROM_MAX_TRANS_UNIT (48)
 
-typedef struct {
-    i2c_device_config_t eeprom_device;  /*!< Configuration for eeprom device */
-    uint8_t addr_wordlen;               /*!< block address wordlen */
-    uint8_t write_time_ms;              /*!< eeprom write time, typically 10ms*/
-} i2c_eeprom_config_t;
-
-struct i2c_eeprom_t {
-    i2c_master_dev_handle_t i2c_dev;      /*!< I2C device handle */
-    uint8_t addr_wordlen;                 /*!< block address wordlen */
-    uint8_t *buffer;                      /*!< I2C transaction buffer */
-    uint8_t write_time_ms;                /*!< I2C eeprom write time(ms)*/
-};
-
-typedef struct i2c_eeprom_t i2c_eeprom_t;
-
-/* handle of EEPROM device */
-typedef struct i2c_eeprom_t *i2c_eeprom_handle_t;
-
 i2c_master_bus_handle_t bus_handle;
 i2c_master_dev_handle_t i2c_dev;
 
@@ -128,17 +110,27 @@ void init_wm8960(void)
     ESP_ERROR_CHECK(i2c_master_init());
     ESP_LOGI(BT_AV_TAG, "I2C initialized successfully");
 
+    ESP_ERROR_CHECK(wm8960_register_write_byte(WM8960_R25_PWR_MGMT_1_REG, WM8960_R25_VMIDSEL(0b11) | WM8960_R25_VREF));
+
+    ESP_ERROR_CHECK(wm8960_register_write_byte(WM8960_R26_PWR_MGMT_2_REG, WM8960_R26_DACL | WM8960_R26_DACR | WM8960_R26_LOUT1 | WM8960_R26_ROUT1));
+
+    ESP_ERROR_CHECK(wm8960_register_write_byte(WM8960_R10_LEFT_DAC_VOLUME_REG, WM8960_R10_LDACVOL(128)));
+
+    ESP_ERROR_CHECK(wm8960_register_write_byte(WM8960_R11_RIGHT_DAC_VOLUME_REG, WM8960_R11_DACVU | WM8960_R11_RDACVOL(128)));
+
+    ESP_ERROR_CHECK(wm8960_register_write_byte(WM8960_R5_ADC_AND_DAC_CTRL1_REG, 0));
+
+    ESP_ERROR_CHECK(wm8960_register_write_byte(WM8960_R47_PWR_MGMT_3_REG, WM8960_R47_LOMIX | WM8960_R47_ROMIX));
+
+    ESP_ERROR_CHECK(wm8960_register_write_byte(WM8960_R34_LEFT_OUT_MIX_1_REG, WM8960_R34_LD2LO));
+
+    ESP_ERROR_CHECK(wm8960_register_write_byte(WM8960_R37_RIGHT_OUT_MIX_2_REG, WM8960_R37_RD2RO));
+
+    ESP_ERROR_CHECK(wm8960_register_write_byte(WM8960_R2_LOUT1_VOLUME_REG, WM8960_R2_LOUT1VOL(0b1111001)));
+    
+    ESP_ERROR_CHECK(wm8960_register_write_byte(WM8960_R3_ROUT1_VOLUME_REG, WM8960_R3_OUT1VU | WM8960_R3_ROUT1VOL(0b1111001)));
 
 
-    /* Demonstrate writing by reseting the MPU9250 */
-    ESP_ERROR_CHECK(wm8960_register_write_byte(WM8960_R25_PWR_MGMT_1_REG, WM8960_R25_VMIDSEL(0b11) | 
-                                                WM8960_R25_VREF | 
-                                                WM8960_R25_AINL |
-                                                WM8960_R25_AINR |
-                                                WM8960_R25_ADCL |
-                                                WM8960_R25_ADCR |
-                                                WM8960_R25_MICB |
-                                                WM8960_R25_DIGENB));
 
     ESP_ERROR_CHECK(i2c_master_bus_rm_device(i2c_dev));
     ESP_LOGI(BT_AV_TAG, "I2C de-initialized successfully");
@@ -273,8 +265,6 @@ void app_main(void)
     ESP_ERROR_CHECK(err);
 
     init_wm8960();
-
-    return;
 
     /*
      * This example only uses the functions of Classical Bluetooth.
