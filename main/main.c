@@ -130,8 +130,6 @@ void init_wm8960(void)
     
     ESP_ERROR_CHECK(wm8960_register_write_byte(WM8960_R3_ROUT1_VOLUME_REG, WM8960_R3_OUT1VU | WM8960_R3_ROUT1VOL(0b1111001)));
 
-
-
     ESP_ERROR_CHECK(i2c_master_bus_rm_device(i2c_dev));
     ESP_LOGI(BT_AV_TAG, "I2C de-initialized successfully");
 }
