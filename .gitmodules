@@ -1,0 +1,3 @@
+[submodule "easyeda-files"]
+	path = easyeda-files
+	url = git@github.com:qarnet/esp32-wm8960-bt-audio-board.git

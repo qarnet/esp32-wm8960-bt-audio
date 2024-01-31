@@ -255,7 +255,7 @@ static void volume_change_simulation(void *arg)
         /* volume up locally every 10 seconds */
         vTaskDelay(10000 / portTICK_PERIOD_MS);
         uint8_t volume = (s_volume + 5) & 0x7f;
-        volume_set_by_local_host(volume);
+        // volume_set_by_local_host(volume);
     }
 }
 
